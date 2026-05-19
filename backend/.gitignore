@@ -1,0 +1,52 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio / Rider
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.cache
+
+# NuGet
+packages/
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Test Results
+TestResults/
+coverage/
+
+# Logs
+Logs/
+*.log
+
+# Secrets & Config (Never commit!)
+appsettings.*.json
+!appsettings.Development.json
+!appsettings.json
+*.pfx
+*.key
+
+# .NET tools (local)
+.dotnet-tools.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies (optional - some keep, some don't)
+# /packages/
+
+# EF Migrations (solo dev - generate locally)
+Data/Migrations/

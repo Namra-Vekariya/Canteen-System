@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="CanteenSystem.API/CanteenSystem.API.csproj" />
+  <Project Path="CanteenSystem.Application/CanteenSystem.Application.csproj" />
+  <Project Path="CanteenSystem.Domain/CanteenSystem.Domain.csproj" />
+  <Project Path="CanteenSystem.Infrastructure/CanteenSystem.Infrastructure.csproj" />
+</Solution>
