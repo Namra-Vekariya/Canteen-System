@@ -6,6 +6,7 @@ public class RefreshToken : BaseEntity
     public required string TokenHash { get; set; }
     public required string Family { get; set; }
     public bool IsRevoked { get; set; } = false;
+    public bool IsUsed { get; set; } = false;
     public DateTime ExpiresAt { get; set; }
 
     // Navigation Property

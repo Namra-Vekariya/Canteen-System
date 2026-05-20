@@ -1,6 +1,11 @@
 using System.Text;
 using CanteenSystem.API.Middleware;
+using CanteenSystem.Application.Interfaces;
+using CanteenSystem.Application.Services;
+using CanteenSystem.Domain.Interfaces;
+using CanteenSystem.Infrastructure.Authentication;
 using CanteenSystem.Infrastructure.Data;
+using CanteenSystem.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +49,11 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 });
-// Add services to the container
+
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
 builder.Services.AddControllers();
 
 // Add the .NET 10 OpenAPI generation service
@@ -69,6 +78,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
+app.UseCors(builder => builder
+    .WithOrigins("http://localhost:5173")
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+    .AllowCredentials());
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
