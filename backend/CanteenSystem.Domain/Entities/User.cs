@@ -12,6 +12,12 @@ public class User : BaseEntity
     public string? ProfileImageUrl { get; set; }
     public bool IsActive { get; set; } = true;
 
-    // Navigation Property
+    public DateTime? EmailVerifiedAt { get; set; }
+
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public virtual ICollection<Otp> Otps { get; set; } = new List<Otp>();
+    public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
+    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 }
