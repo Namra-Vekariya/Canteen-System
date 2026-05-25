@@ -3,16 +3,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi, registerSchema, type RegisterFormData } from '@/services/authApi';
-import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
-
+import type { RegisterResponse } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function Register() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
   const [isLoading, setIsLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
@@ -22,10 +20,10 @@ export default function Register() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      const { accessToken, ...user } = await authApi.register(data);
-      setAuth(user, accessToken);
-      toast.success('Account created successfully!');
-      navigate('/dashboard');
+      const result = await authApi.register(data) as RegisterResponse;
+      toast.success(result.message);
+      // Redirect to verify-email page, passing the email so user doesn't have to retype it
+      navigate('/verify-email', { state: { email: result.email } });
     } catch (error: any) {
       const errorData = error.response?.data;
       const errorMessage = errorData?.errors?.[0]

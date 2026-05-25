@@ -111,6 +111,7 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast"); 
 
+await DbSeeder.SeedAsync(app.Services);
 
 app.Run();
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

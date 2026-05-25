@@ -44,8 +44,15 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't attempt refresh on auth endpoints — let the error propagate
-      if (originalRequest.url?.includes('/auth/login') ||
-          originalRequest.url?.includes('/auth/register')) {
+      const skipRefreshUrls = [
+        '/auth/login',
+        '/auth/register',
+        '/auth/verify-email',
+        '/auth/resend-verification-otp',
+        '/auth/forgot-password',
+        '/auth/reset-password',
+      ];
+      if (skipRefreshUrls.some(url => originalRequest.url?.includes(url))) {
         return Promise.reject(error);
       }
       // If we are already in the middle of refreshing, queue this request up

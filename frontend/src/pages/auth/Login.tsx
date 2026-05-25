@@ -31,7 +31,13 @@ export default function Login() {
         const errorMessage = errorData?.errors?.[0]
           || errorData?.message
           || 'Failed to login. Please check your credentials.';
-      toast.error(errorMessage);
+
+       if (errorMessage.toLowerCase().includes('verify your email')) {
+          toast.error('You need to verify your email first.');
+          navigate('/verify-email', { state: { email: data.email } });
+        } else {
+          toast.error(errorMessage);
+        }
     } finally {
       setIsLoading(false);
     }
@@ -53,7 +59,12 @@ export default function Login() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <Input id="password" type="password" {...register('password')} />
             {errors.password && <p className="text-red-500 text-xs">{errors.password.message}</p>}
           </div>
