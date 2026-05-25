@@ -6,6 +6,7 @@ using CanteenSystem.Domain.Interfaces;
 using CanteenSystem.Infrastructure.Authentication;
 using CanteenSystem.Infrastructure.Data;
 using CanteenSystem.Infrastructure.Repositories;
+using CanteenSystem.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -53,6 +54,9 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+// Add these two lines:
+builder.Services.AddScoped<IOtpService, OtpService>();
+builder.Services.AddScoped<IEmailService, CanteenEmailService>();
 
 builder.Services.AddControllers();
 

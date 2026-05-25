@@ -1,5 +1,5 @@
-using System.Security.Cryptography;
-using System.Text;
+using CanteenSystem.Application.Common.Exceptions;
+using CanteenSystem.Application.Common.Helpers;
 using CanteenSystem.Application.DTOs.Auth;
 using CanteenSystem.Application.Interfaces;
 using CanteenSystem.Domain.Entities;
@@ -13,186 +13,264 @@ public class AuthService : IAuthService
     private readonly IGenericRepository<User> _userRepository;
     private readonly IGenericRepository<RefreshToken> _refreshTokenRepository;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IOtpService _otpService;
+    private readonly IEmailService _emailService;
 
     public AuthService(
-        IGenericRepository<User> userRepository, 
+        IGenericRepository<User> userRepository,
         IGenericRepository<RefreshToken> refreshTokenRepository,
-        IJwtTokenGenerator jwtTokenGenerator)
+        IJwtTokenGenerator jwtTokenGenerator,
+        IOtpService otpService,
+        IEmailService emailService)
     {
         _userRepository = userRepository;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenGenerator = jwtTokenGenerator;
+        _otpService = otpService;
+        _emailService = emailService;
     }
 
-    public async Task<(AuthResponse response, string refreshToken)> RegisterAsync(RegisterRequest request)
+    public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
     {
-        var existingUser = await _userRepository.GetFirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
-        if (existingUser != null) throw new Exception("Email is already registered.");
+        var existing = await _userRepository.GetFirstOrDefaultAsync(
+            u => u.Email.ToLower() == request.Email.ToLower());
 
-        var newUser = new User
+        if (existing != null)
+            throw new AppException("An account with this email already exists.", 409);
+
+        var user = new User
         {
-            Name = request.Name,
-            Email = request.Email.ToLower(),
+            Name         = request.Name.Trim(),
+            Email        = request.Email.ToLower().Trim(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = UserRole.User 
+            Role         = UserRole.User,
+            IsActive     = false,          // Inactive until email verified
+            EmailVerifiedAt = null
         };
 
-        await _userRepository.AddAsync(newUser);
+        await _userRepository.AddAsync(user);
         await _userRepository.SaveChangesAsync();
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(newUser);
-        var refreshToken = await GenerateAndSaveRefreshTokenAsync(newUser.Id);
+        // Generate OTP → send verification email
+        var otpCode = await _otpService.GenerateAndSaveOtpAsync(user.Id, OtpType.EmailVerification);
+        await _emailService.SendEmailVerificationOtpAsync(user.Email, user.Name, otpCode, expiryMinutes: 10);
 
-        var response = new AuthResponse
+        return new RegisterResponse
         {
-            Id = newUser.Id,
-            Name = newUser.Name,
-            Email = newUser.Email,
-            Role = newUser.Role.ToString(),
-            AccessToken = accessToken
+            Message = "Registration successful. Please check your email for the verification code.",
+            Email   = user.Email
         };
-
-        return (response, refreshToken);
     }
 
-    public async Task<(AuthResponse response, string refreshToken)> LoginAsync(LoginRequest request)
+    public async Task<(AuthResponse response, string refreshToken)> VerifyEmailAsync(
+        VerifyEmailRequest request, string? ipAddress = null)
     {
-        var user = await _userRepository.GetFirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
-        if (user == null || !user.IsActive) throw new Exception("Invalid credentials.");
+        var user = await _userRepository.GetFirstOrDefaultAsync(
+            u => u.Email.ToLower() == request.Email.ToLower())
+            ?? throw new AppException("User not found.", 404);
 
-        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
-        if (!isPasswordValid) throw new Exception("Invalid credentials.");
+        if (user.EmailVerifiedAt != null)
+            throw new AppException("Email is already verified. Please log in.", 422);
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-        var refreshToken = await GenerateAndSaveRefreshTokenAsync(user.Id);
+        var isValid = await _otpService.VerifyOtpAsync(user.Id, OtpType.EmailVerification, request.OtpCode);
+        if (!isValid)
+            throw new AppException("Invalid or expired OTP. Please request a new code.", 422);
 
-        var response = new AuthResponse
-        {
-            Id = user.Id,
-            Name = user.Name,
-            Email = user.Email,
-            Role = user.Role.ToString(),
-            AccessToken = accessToken
-        };
+        // Activate the account
+        user.EmailVerifiedAt = DateTime.UtcNow;
+        user.IsActive        = true;
 
-        return (response, refreshToken);
+        await _userRepository.UpdateAsync(user);
+        await _userRepository.SaveChangesAsync();
+
+        // Issue tokens — user is now fully authenticated
+        var accessToken  = _jwtTokenGenerator.GenerateAccessToken(user);
+        var refreshToken = await GenerateAndSaveRefreshTokenAsync(user.Id, ipAddress: ipAddress);
+
+        return (ToAuthResponse(user, accessToken), refreshToken);
     }
 
-    // LOGOUT 
+    public async Task ResendVerificationOtpAsync(ResendOtpRequest request)
+    {
+        var user = await _userRepository.GetFirstOrDefaultAsync(
+            u => u.Email.ToLower() == request.Email.ToLower());
+
+        // Silent return — don't reveal whether email is registered for security
+        if (user == null || user.EmailVerifiedAt != null) return;
+
+        var otpCode = await _otpService.GenerateAndSaveOtpAsync(user.Id, OtpType.EmailVerification);
+        await _emailService.SendEmailVerificationOtpAsync(user.Email, user.Name, otpCode, expiryMinutes: 10);
+    }
+
+    public async Task<(AuthResponse response, string refreshToken)> LoginAsync(
+        LoginRequest request, string? ipAddress = null)
+    {
+        var user = await _userRepository.GetFirstOrDefaultAsync(
+            u => u.Email.ToLower() == request.Email.ToLower());
+
+        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            throw new AppException("Invalid email or password.", 401);
+
+        if (user.EmailVerifiedAt == null)
+            throw new AppException("Please verify your email before logging in.", 401);
+
+        if (!user.IsActive)
+            throw new AppException("Your account has been deactivated. Please contact support.", 401);
+
+        var accessToken  = _jwtTokenGenerator.GenerateAccessToken(user);
+        var refreshToken = await GenerateAndSaveRefreshTokenAsync(user.Id, ipAddress: ipAddress);
+
+        return (ToAuthResponse(user, accessToken), refreshToken);
+    }
+
+    public async Task ForgotPasswordAsync(ForgotPasswordRequest request)
+    {
+        var user = await _userRepository.GetFirstOrDefaultAsync(
+            u => u.Email.ToLower() == request.Email.ToLower());
+
+        // Silent return — don't reveal whether email is registered
+        if (user == null) return;
+
+        if (user.EmailVerifiedAt == null)
+            throw new AppException("Please verify your email first before resetting your password.", 422);
+
+        var otpCode = await _otpService.GenerateAndSaveOtpAsync(user.Id, OtpType.PasswordReset);
+        await _emailService.SendPasswordResetOtpAsync(user.Email, user.Name, otpCode, expiryMinutes: 10);
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var user = await _userRepository.GetFirstOrDefaultAsync(
+            u => u.Email.ToLower() == request.Email.ToLower())
+            ?? throw new AppException("User not found.", 404);
+
+        var isValid = await _otpService.VerifyOtpAsync(user.Id, OtpType.PasswordReset, request.OtpCode);
+        if (!isValid)
+            throw new AppException("Invalid or expired OTP.", 422);
+
+        // Update password
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await _userRepository.UpdateAsync(user);
+
+        // Revoke ALL active refresh tokens — force re-login on all devices
+        var activeTokens = (await _refreshTokenRepository.GetWhereAsync(
+            t => t.UserId == user.Id && !t.IsRevoked)).ToList();
+
+        foreach (var token in activeTokens)
+        {
+            token.IsRevoked     = true;
+            token.RevokedAt     = DateTime.UtcNow;
+            token.RevokedReason = "PasswordReset";
+            await _refreshTokenRepository.UpdateAsync(token);
+        }
+
+        await _userRepository.SaveChangesAsync();
+    }
+
     public async Task LogoutAsync(string refreshToken)
     {
-        var hashedToken = HashTokenWithSha256(refreshToken);
-        
-        // Find the token in the DB
-        var tokenEntity = await _refreshTokenRepository.GetFirstOrDefaultAsync(t => t.TokenHash == hashedToken);
-        
-        if (tokenEntity != null && !tokenEntity.IsRevoked)
-        {
-            tokenEntity.IsRevoked = true;
-            await _refreshTokenRepository.UpdateAsync(tokenEntity);
-            await _refreshTokenRepository.SaveChangesAsync();
-        }
+        var hashed      = CryptoHelper.HashWithSha256(refreshToken);
+        var tokenEntity = await _refreshTokenRepository.GetFirstOrDefaultAsync(
+            t => t.TokenHash == hashed);
+
+        if (tokenEntity == null || tokenEntity.IsRevoked) return;
+
+        tokenEntity.IsRevoked     = true;
+        tokenEntity.RevokedAt     = DateTime.UtcNow;
+        tokenEntity.RevokedReason = "Logout";
+
+        await _refreshTokenRepository.UpdateAsync(tokenEntity);
+        await _refreshTokenRepository.SaveChangesAsync();
     }
 
-public async Task<(AuthResponse response, string newRefreshToken)> RefreshTokenAsync(string oldRefreshToken)
+    public async Task<(AuthResponse response, string newRefreshToken)> RefreshTokenAsync(
+        string oldRefreshToken, string? ipAddress = null)
     {
-        var hashedToken = HashTokenWithSha256(oldRefreshToken);
+        var hashed      = CryptoHelper.HashWithSha256(oldRefreshToken);
+        var tokenEntity = await _refreshTokenRepository.GetFirstOrDefaultAsync(
+            t => t.TokenHash == hashed)
+            ?? throw new AppException("Invalid refresh token.", 401);
 
-        // Find the token in the database, including the associated User
-        // or just fetch the user separately using the tokenEntity.UserId.
-        var tokenEntity = await _refreshTokenRepository.GetFirstOrDefaultAsync(t => t.TokenHash == hashedToken);
-
-        if (tokenEntity == null)
-        {
-            throw new Exception("Invalid refresh token.");
-        }
-
-        // TOKEN REUSE DETECTION (Compromise Defense)
+        // Token reuse / compromise detection
         if (tokenEntity.IsUsed || tokenEntity.IsRevoked)
         {
-            // Revoke the entire family to lock out the potential attacker.
-            await RevokeTokenFamilyAsync(tokenEntity.Family);
-            throw new Exception("Security breach detected. Please log in again.");
+            await RevokeTokenFamilyAsync(tokenEntity.Family, reason: "TokenReuse");
+            throw new AppException("Security alert: token already used. Please log in again.", 401);
         }
 
-        // Check Expiration
         if (tokenEntity.ExpiresAt < DateTime.UtcNow)
         {
-            tokenEntity.IsUsed = true;
+            tokenEntity.IsUsed     = true;
+            tokenEntity.RevokedAt  = DateTime.UtcNow;
+            tokenEntity.RevokedReason = "Expired";
             await _refreshTokenRepository.UpdateAsync(tokenEntity);
             await _refreshTokenRepository.SaveChangesAsync();
-            throw new Exception("Refresh token expired. Please log in again.");
+            throw new AppException("Refresh token expired. Please log in again.", 401);
         }
 
-        // Mark the current token as used
-        tokenEntity.IsUsed = true;
+        // Mark old token as rotated
+        tokenEntity.IsUsed        = true;
+        tokenEntity.RevokedAt     = DateTime.UtcNow;
+        tokenEntity.RevokedReason = "Rotated";
         await _refreshTokenRepository.UpdateAsync(tokenEntity);
 
-        // Fetch the User
         var user = await _userRepository.GetByIdAsync(tokenEntity.UserId);
         if (user == null || !user.IsActive)
-        {
-            throw new Exception("User account is inactive or missing.");
-        }
+            throw new AppException("User account is inactive or not found.", 401);
 
-        // Generate New Tokens
-        var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-        var newRefreshToken = await GenerateAndSaveRefreshTokenAsync(user.Id, tokenEntity.Family); // Keep the same family!
+        var newAccessToken  = _jwtTokenGenerator.GenerateAccessToken(user);
+        var newRefreshToken = await GenerateAndSaveRefreshTokenAsync(
+            user.Id, existingFamily: tokenEntity.Family, ipAddress: ipAddress);
 
-        var response = new AuthResponse
-        {
-            Id = user.Id,
-            Name = user.Name,
-            Email = user.Email,
-            Role = user.Role.ToString(),
-            AccessToken = newAccessToken
-        };
-
-        return (response, newRefreshToken);
+        return (ToAuthResponse(user, newAccessToken), newRefreshToken);
     }
 
-    // Helper method to revoke all tokens in a family
-    private async Task RevokeTokenFamilyAsync(string family)
+    // ── Private Helpers ───────────────────────────────────────────────────
+
+    private async Task RevokeTokenFamilyAsync(string family, string reason)
     {
-        var familyTokens = (await _refreshTokenRepository.GetAllAsync())
-            .Where(t => t.Family == family && !t.IsRevoked)
-            .ToList();
+        var familyTokens = (await _refreshTokenRepository.GetWhereAsync(
+            t => t.Family == family && !t.IsRevoked)).ToList();
 
         foreach (var token in familyTokens)
         {
-            token.IsRevoked = true;
+            token.IsRevoked     = true;
+            token.RevokedAt     = DateTime.UtcNow;
+            token.RevokedReason = reason;
             await _refreshTokenRepository.UpdateAsync(token);
         }
 
         await _refreshTokenRepository.SaveChangesAsync();
     }
-    
-    private async Task<string> GenerateAndSaveRefreshTokenAsync(Guid userId ,string? existingFamily = null)
-    {
-        var (token, expiresAt) = _jwtTokenGenerator.GenerateRefreshToken();
 
-        var refreshTokenEntity = new RefreshToken
+    private async Task<string> GenerateAndSaveRefreshTokenAsync(
+        Guid userId, string? existingFamily = null, string? ipAddress = null)
+    {
+        var (rawToken, expiresAt) = _jwtTokenGenerator.GenerateRefreshToken();
+
+        var entity = new RefreshToken
         {
-            UserId = userId,
-            TokenHash = HashTokenWithSha256(token), // Using SHA-256 allows us to look it up later
-            Family = existingFamily ?? Guid.NewGuid().ToString(),
-            ExpiresAt = expiresAt,
-            IsUsed = false,
-            IsRevoked = false
+            UserId        = userId,
+            TokenHash     = CryptoHelper.HashWithSha256(rawToken),
+            Family        = existingFamily ?? Guid.NewGuid().ToString(),
+            ExpiresAt     = expiresAt,
+            IsUsed        = false,
+            IsRevoked     = false,
+            IpAddress     = ipAddress
         };
 
-        await _refreshTokenRepository.AddAsync(refreshTokenEntity);
+        await _refreshTokenRepository.AddAsync(entity);
         await _refreshTokenRepository.SaveChangesAsync();
 
-        return token;
+        return rawToken;
     }
 
-    // Helper to securely hash the token for DB storage and lookups
-    private static string HashTokenWithSha256(string token)
+    private static AuthResponse ToAuthResponse(User user, string accessToken) => new()
     {
-        using var sha256 = SHA256.Create();
-        var bytes = Encoding.UTF8.GetBytes(token);
-        var hash = sha256.ComputeHash(bytes);
-        return Convert.ToBase64String(hash);
-    }
+        Id          = user.Id,
+        Name        = user.Name,
+        Email       = user.Email,
+        Role        = user.Role.ToString(),
+        AccessToken = accessToken
+    };
 }

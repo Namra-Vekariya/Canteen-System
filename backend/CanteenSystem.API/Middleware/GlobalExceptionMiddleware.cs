@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using CanteenSystem.Application.Common;
+using CanteenSystem.Application.Common.Exceptions;   // ← ADD THIS
 
 namespace CanteenSystem.API.Middleware;
 
@@ -19,26 +20,30 @@ public class GlobalExceptionMiddleware
     {
         try
         {
-            await _next(context); // Proceed to the next middleware/controller
+            await _next(context);
+        }
+        catch (AppException ex)                          // ← ADD THIS BLOCK
+        {
+            _logger.LogWarning("App exception [{StatusCode}]: {Message}", ex.StatusCode, ex.Message);
+            await HandleExceptionAsync(context, ex.StatusCode, ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
-            await HandleExceptionAsync(context, ex);
+            await HandleExceptionAsync(context, (int)HttpStatusCode.InternalServerError,
+                "An internal server error occurred. Please try again later.");
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static Task HandleExceptionAsync(HttpContext context, int statusCode, string message)
     {
         context.Response.ContentType = "application/json";
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        context.Response.StatusCode = statusCode;
 
-        var response = ApiResponse<object>.FailureResponse(
-            "An internal server error occurred. Please try again later.",
-            new List<string> { exception.Message } // In production, you might want to hide the exact exception.Message for security
-        );
+        var response = ApiResponse<object>.FailureResponse(message);
+        var json = JsonSerializer.Serialize(response,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         return context.Response.WriteAsync(json);
     }
 }
