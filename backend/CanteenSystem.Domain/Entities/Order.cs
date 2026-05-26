@@ -14,14 +14,11 @@ public class Order : BaseEntity
 
     public required decimal TotalAmount { get; set; }     
 
-    // ── Order Details ──────────────────────────────────────────────────────
     public string? SpecialInstructions { get; set; }
 
-    // ── Cancellation ───────────────────────────────────────────────────────
     public DateTime? CancelledAt { get; set; }
     public string? CancellationReason { get; set; }
 
-    // ── Collection ─────────────────────────────────────────────────────────
     public DateTime? CollectedAt { get; set; }
 
     public virtual User? User { get; set; }

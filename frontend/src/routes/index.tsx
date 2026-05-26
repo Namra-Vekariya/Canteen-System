@@ -7,6 +7,7 @@ import GuestRoute from './GuestRoute';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
 import ResetPassword from '@/pages/auth/ResetPassword';
 import VerifyEmail from '@/pages/auth/VerifyEmail';
+import MainLayout from '@/components/layout/MainLayout';
 
 export const router = createBrowserRouter([
   {
@@ -43,8 +44,17 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        path: '/dashboard',
-        element: <Dashboard />,
+        element: <MainLayout />, 
+        children: [
+          {
+            path: '/dashboard',
+            element: <Dashboard />,
+          },
+          {
+            path: '/profile',
+            // element: <ProfilePage />, // We will build this next!
+          },
+        ],
       },
     ],
   },

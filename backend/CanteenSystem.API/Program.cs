@@ -7,6 +7,7 @@ using CanteenSystem.Infrastructure.Authentication;
 using CanteenSystem.Infrastructure.Data;
 using CanteenSystem.Infrastructure.Repositories;
 using CanteenSystem.Infrastructure.Services;
+using CanteenSystem.Infrastructure.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +58,10 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // Add these two lines:
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IEmailService, CanteenEmailService>();
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+builder.Services.AddScoped<IMediaService, CloudinaryMediaService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
 
 builder.Services.AddControllers();
 

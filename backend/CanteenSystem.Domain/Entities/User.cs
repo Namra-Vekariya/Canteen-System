@@ -10,6 +10,7 @@ public class User : BaseEntity
     public UserRole Role { get; set; } = UserRole.User;
     public string? Phone { get; set; }
     public string? ProfileImageUrl { get; set; }
+    public string? ProfileImagePublicId { get; set; }  // to delete the old images from cloudinary
     public bool IsActive { get; set; } = true;
 
     public DateTime? EmailVerifiedAt { get; set; }
