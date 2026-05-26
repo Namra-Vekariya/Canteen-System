@@ -1,11 +1,15 @@
+using System.Net;
+
 namespace CanteenSystem.Application.Common.Exceptions;
 
 public class AppException : Exception
 {
-    public int StatusCode { get; }
+    public HttpStatusCode StatusCode { get; }
+    public List<string>? Errors { get; } 
 
-    public AppException(string message, int statusCode = 400) : base(message)
+    public AppException(string message, HttpStatusCode statusCode = HttpStatusCode.BadRequest,List<string>? errors =null ) : base(message)
     {
         StatusCode = statusCode;
+        Errors = errors;
     }
 }

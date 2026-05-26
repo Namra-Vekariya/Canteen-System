@@ -8,6 +8,7 @@ import ForgotPassword from '@/pages/auth/ForgotPassword';
 import ResetPassword from '@/pages/auth/ResetPassword';
 import VerifyEmail from '@/pages/auth/VerifyEmail';
 import MainLayout from '@/components/layout/MainLayout';
+import Profile from '@/pages/profile/Profile';
 
 export const router = createBrowserRouter([
   {
@@ -52,7 +53,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/profile',
-            // element: <ProfilePage />, // We will build this next!
+            element: <Profile />, // We will build this next!
           },
         ],
       },

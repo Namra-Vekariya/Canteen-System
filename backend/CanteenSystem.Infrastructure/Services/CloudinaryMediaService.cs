@@ -1,3 +1,4 @@
+using System.Net;
 using CanteenSystem.Application.Common.Exceptions;
 using CanteenSystem.Application.Interfaces;
 using CanteenSystem.Infrastructure.Settings;
@@ -9,7 +10,9 @@ using Microsoft.Extensions.Options;
 namespace CanteenSystem.Infrastructure.Services;
 
 /// Handles images (JPEG, PNG, WebP) and documents (PDF).
-/// Register as a singleton in DI — Cloudinary client is thread-safe.
+/// Register as a singleton in DI — Cloudinary client is thread-safe. <summary>
+/// Handles images (JPEG, PNG, WebP) and documents (PDF).
+/// </summary>
 public class CloudinaryMediaService : IMediaService
 {
 
@@ -63,7 +66,7 @@ public class CloudinaryMediaService : IMediaService
         if (!AllowedMimeTypes.TryGetValue(mimeType, out bool isDocument))
             throw new AppException(
                 $"File type '{mimeType}' is not allowed. " +
-                $"Accepted types: {string.Join(", ", AllowedMimeTypes.Keys)}", 400);
+                $"Accepted types: {string.Join(", ", AllowedMimeTypes.Keys)}", HttpStatusCode.BadRequest);
 
         if (fileStream.CanSeek)
         {
@@ -71,12 +74,12 @@ public class CloudinaryMediaService : IMediaService
             string label = isDocument ? "Documents" : "Images";
 
             if (fileStream.Length == 0)
-                throw new AppException("File is empty.", 400);
+                throw new AppException("File is empty.", HttpStatusCode.BadRequest);
 
             if (fileStream.Length > maxSize)
                 throw new AppException(
                     $"{label} must be under {maxSize / (1024 * 1024)} MB. " +
-                    $"Your file is {fileStream.Length / (1024.0 * 1024.0):F1} MB.", 400);
+                    $"Your file is {fileStream.Length / (1024.0 * 1024.0):F1} MB.", HttpStatusCode.BadRequest);
         }
         // Documents use ResourceType.Raw — Cloudinary stores them as-is.
         RawUploadParams uploadParams = isDocument
@@ -97,7 +100,7 @@ public class CloudinaryMediaService : IMediaService
                 "Cloudinary upload failed for {FileName}: {Error}",
                 fileName, uploadResult.Error.Message);
 
-            throw new AppException($"Upload failed: {uploadResult.Error.Message}", 500);
+            throw new AppException($"Upload failed: {uploadResult.Error.Message}", HttpStatusCode.InternalServerError);
         }
 
         _logger.LogInformation(

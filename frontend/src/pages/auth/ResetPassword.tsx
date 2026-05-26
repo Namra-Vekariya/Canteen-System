@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { authApi, resetPasswordSchema, type ResetPasswordFormData } from '@/services/authApi';
+import { authApi } from '@/services/authApi';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { resetPasswordSchema, type ResetPasswordFormData } from '@/schemas/auth';
 
 export default function ResetPassword() {
   const navigate = useNavigate();

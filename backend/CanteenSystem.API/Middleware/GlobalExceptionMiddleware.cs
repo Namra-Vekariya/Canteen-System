@@ -25,7 +25,7 @@ public class GlobalExceptionMiddleware
         catch (AppException ex)                          // ← ADD THIS BLOCK
         {
             _logger.LogWarning("App exception [{StatusCode}]: {Message}", ex.StatusCode, ex.Message);
-            await HandleExceptionAsync(context, ex.StatusCode, ex.Message);
+            await HandleExceptionAsync(context, (int)ex.StatusCode, ex.Message);
         }
         catch (Exception ex)
         {
@@ -35,12 +35,12 @@ public class GlobalExceptionMiddleware
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, int statusCode, string message)
+    private static Task HandleExceptionAsync(HttpContext context, int statusCode, string message,List<string>? errors = null)
     {
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
 
-        var response = ApiResponse<object>.FailureResponse(message);
+        var response = ApiResponse<object>.FailureResponse(message,errors);
         var json = JsonSerializer.Serialize(response,
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
