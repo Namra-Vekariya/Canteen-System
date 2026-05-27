@@ -2,6 +2,7 @@ using System.Text;
 using CanteenSystem.API.Middleware;
 using CanteenSystem.Application.Interfaces;
 using CanteenSystem.Application.Services;
+using CanteenSystem.Application.Services.Menu;
 using CanteenSystem.Domain.Interfaces;
 using CanteenSystem.Infrastructure.Authentication;
 using CanteenSystem.Infrastructure.Data;
@@ -61,7 +62,8 @@ builder.Services.AddScoped<IEmailService, CanteenEmailService>();
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddScoped<IMediaService, CloudinaryMediaService>();
 builder.Services.AddScoped<IUserService, UserService>();
-
+builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 
 builder.Services.AddControllers();
 
