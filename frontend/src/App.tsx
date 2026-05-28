@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom'
 import { Toaster, } from './components/ui/sonner'
 import { router } from './routes'
 import { useAuthStore } from './store/authStore'
+import { useCartStore } from './store/cartStore'
 import { authApi } from './services/authApi'
 import './App.css'
 
@@ -17,6 +18,7 @@ function App() {
       } catch (error) {
         // If it fails, they just aren't logged in. Clear state.
         clearAuth();
+        useCartStore.getState().clearCart();
       } finally {
         // Tell the app it's done checking so it can render the UI
         setInitialized();

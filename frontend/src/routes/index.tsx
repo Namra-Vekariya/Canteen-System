@@ -9,6 +9,7 @@ import ResetPassword from '@/pages/auth/ResetPassword';
 import VerifyEmail from '@/pages/auth/VerifyEmail';
 import MainLayout from '@/components/layout/MainLayout';
 import Profile from '@/pages/profile/Profile';
+import Cart from '@/pages/Cart';
 
 export const router = createBrowserRouter([
   {
@@ -55,6 +56,10 @@ export const router = createBrowserRouter([
             path: '/profile',
             element: <Profile />, // We will build this next!
           },
+          {
+            path:'/cart',
+            element:<Cart/>
+          }
         ],
       },
     ],

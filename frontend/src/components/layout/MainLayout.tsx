@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
 import { apiClient } from '@/services/apiClient';
 import { Search, Bell, ShoppingCart, LogOut, UserCircle, Settings } from 'lucide-react';
 
@@ -20,12 +21,14 @@ import { TooltipProvider } from '../ui/tooltip';
 
 export default function MainLayout() {
   const { user, clearAuth } = useAuthStore();
+  const { totalItems, clearCart } = useCartStore();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
       await apiClient.post('/auth/logout');
     } finally {
+      clearCart();
       clearAuth();
       navigate('/login', { replace: true });
     }
@@ -66,11 +69,13 @@ export default function MainLayout() {
                 </Button>
 
                 {user?.role !== 'Admin' && (
-                <Button variant="ghost" size="icon" className="relative text-foreground hover:text-primary">
+                <Button variant="ghost" size="icon" className="relative text-foreground hover:text-primary" onClick={() => navigate('/cart')}>
                     <ShoppingCart className="w-5 h-5" />
+                    {totalItems > 0 && (
                     <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                    3
+                        {totalItems}
                     </span>
+                    )}
                 </Button>
                 )}
 

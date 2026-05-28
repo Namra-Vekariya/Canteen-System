@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5112/api/v1';
 
@@ -92,6 +93,7 @@ apiClient.interceptors.response.use(
         processQueue(refreshError, null);
         // If refresh fails, wipe auth state — ProtectedRoute will redirect to /login
         useAuthStore.getState().clearAuth();
+        useCartStore.getState().clearCart();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
