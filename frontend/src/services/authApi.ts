@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { AuthResponse } from '@/types/api';
+import type { AuthResponse, RegisterResponse } from '@/types/api';
 import type { ForgotPasswordFormData, LoginFormData, RegisterFormData, ResetPasswordFormData, VerifyEmailFormData } from '@/schemas/auth';
 
 export const authApi = {
@@ -10,7 +10,7 @@ export const authApi = {
 
   register: async (data: RegisterFormData) => {
     const response = await apiClient.post('/auth/register', data);
-    return response.data.data as RegisterFormData;
+    return response.data.data as RegisterResponse;
   },
 
   verifyEmail: async (data: VerifyEmailFormData) => {

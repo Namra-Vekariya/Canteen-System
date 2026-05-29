@@ -3,8 +3,9 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { authApi } from '@/services/authApi';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
-
-import { Button } from '@/components/ui/button';
+import { AuthCard } from '@/components/common/AuthCard';
+import { OTPInput } from '@/components/common/OTPInput';
+import { LoadingButton } from '@/components/common/LoadingButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -13,7 +14,6 @@ export default function VerifyEmail() {
   const location = useLocation();
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  // Email passed from Register page via navigate state
   const emailFromState = (location.state as { email?: string })?.email || '';
 
   const [email, setEmail] = useState(emailFromState);
@@ -56,7 +56,7 @@ export default function VerifyEmail() {
     try {
       const message = await authApi.resendVerificationOtp(email);
       toast.success(message);
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to resend OTP. Please try again.');
     } finally {
       setIsResending(false);
@@ -64,65 +64,59 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="mb-8 text-center">
-          <div className="text-4xl mb-3">📧</div>
-          <h1 className="text-2xl font-bold text-gray-900">Verify Your Email</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            We've sent a 6-digit code to your email.
+    <AuthCard
+      icon="📧"
+      title="Verify Your Email"
+      subtitle="We've sent a 6-digit code to your email."
+      footer={
+        <div className="space-y-3">
+          <p className="text-gray-500">
+            Didn't receive the code?{' '}
+            <button
+              onClick={handleResendOtp}
+              disabled={isResending}
+              className="text-blue-600 hover:underline font-medium disabled:text-gray-400"
+            >
+              {isResending ? 'Sending...' : 'Resend OTP'}
+            </button>
+          </p>
+          <p>
+            <Link to="/login" className="text-gray-500 hover:underline">
+              Back to Sign In
+            </Link>
           </p>
         </div>
-
-        <form onSubmit={handleVerify} className="space-y-4" noValidate>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
-              disabled={!!emailFromState}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="otpCode">Verification Code</Label>
-            <Input
-              id="otpCode"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="000000"
-              className="text-center text-2xl tracking-[0.5em] font-mono"
-            />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Verifying...' : 'Verify Email'}
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center text-sm">
-          <span className="text-gray-500">Didn't receive the code? </span>
-          <button
-            onClick={handleResendOtp}
-            disabled={isResending}
-            className="text-blue-600 hover:underline font-medium disabled:text-gray-400"
-          >
-            {isResending ? 'Sending...' : 'Resend OTP'}
-          </button>
+      }
+    >
+      <form onSubmit={handleVerify} className="space-y-4" noValidate>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="john@example.com"
+            disabled={!!emailFromState}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
         </div>
 
-        <div className="mt-3 text-center text-sm">
-          <Link to="/login" className="text-gray-500 hover:underline">
-            Back to Sign In
-          </Link>
-        </div>
-      </div>
-    </div>
+        <OTPInput
+          label="Verification Code"
+          htmlFor="otpCode"
+          value={otpCode}
+          onChange={setOtpCode}
+        />
+
+        <LoadingButton
+          type="submit"
+          className="w-full"
+          isLoading={isLoading}
+          loadingText="Verifying..."
+        >
+          Verify Email
+        </LoadingButton>
+      </form>
+    </AuthCard>
   );
 }

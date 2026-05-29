@@ -8,11 +8,12 @@ import { updateProfileSchema, type UpdateProfileFormData } from '@/schemas/user'
 import { toast } from 'sonner';
 import { Camera, Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { InputField } from '@/components/common/FormField';
+import { LoadingButton } from '@/components/common/LoadingButton';
 
 const ALLOWED_IMAGE_ORIGIN = 'https://res.cloudinary.com/drkdujqo5/image/upload/';
 
@@ -34,16 +35,14 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 
 export default function Profile() {
   const { user, setAuth } = useAuthStore();
-  
-  // NEW: Initial Load State
+
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingInfo, setIsSavingInfo] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  
-  // Optimistic UI state for smoother imagery transitions
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors , isDirty} } = useForm<UpdateProfileFormData>({
+  const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<UpdateProfileFormData>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
       name: '',
@@ -51,21 +50,18 @@ export default function Profile() {
     },
   });
 
-  // THE FIX: Fetch absolute truth from backend on mount
   useEffect(() => {
     let isMounted = true;
 
     const fetchTrueProfile = async () => {
       try {
         const { data: trueProfile } = await userApi.getProfile();
-        
+
         if (!isMounted) return;
 
-        // 1. Sync global state so the Navbar Avatar updates
         const currentToken = useAuthStore.getState().accessToken;
         if (currentToken) setAuth(trueProfile, currentToken);
 
-        // 2. Hydrate the form inputs securely
         reset({
           name: trueProfile.name,
           phone: trueProfile.phone ?? '',
@@ -82,7 +78,6 @@ export default function Profile() {
     return () => { isMounted = false; };
   }, [reset, setAuth]);
 
-  // Clean up optimistic object URLs to prevent browser memory leaks
   useEffect(() => {
     return () => {
       if (previewUrl && previewUrl.startsWith('blob:')) {
@@ -130,20 +125,18 @@ export default function Profile() {
       return;
     }
 
-    // Set optimistic preview immediately
     const localBlob = URL.createObjectURL(file);
     setPreviewUrl(localBlob);
     setIsUploadingImage(true);
-    
+
     try {
       const { data: updatedProfile } = await userApi.uploadProfileImage(file);
       const currentToken = useAuthStore.getState().accessToken;
       if (currentToken) setAuth(updatedProfile, currentToken);
-      
+
       setPreviewUrl(null);
       toast.success('Photo updated');
     } catch (error: unknown) {
-      // Revert preview back to original on failure
       setPreviewUrl(null);
       toast.error(getApiErrorMessage(error, 'Failed to upload photo'));
     } finally {
@@ -152,7 +145,6 @@ export default function Profile() {
     }
   };
 
-  // NEW: Skeleton Loader while the initial GET request is firing
   if (isLoadingProfile || !user) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
@@ -201,7 +193,7 @@ export default function Profile() {
                 disabled={isBusy}
               />
 
-              <Label
+              <label
                 htmlFor="picture-upload"
                 tabIndex={isBusy ? -1 : 0}
                 onKeyDown={(e) => {
@@ -219,7 +211,7 @@ export default function Profile() {
                 ) : (
                   <Camera className="w-8 h-8 text-white" />
                 )}
-              </Label>
+              </label>
             </div>
             <p className="text-xs text-muted-foreground mt-4 text-center">
               Supports JPEG, PNG, or WebP up to 5 MB.
@@ -235,22 +227,22 @@ export default function Profile() {
           <CardContent>
             <form onSubmit={handleSubmit(onSubmitInfo)} className="space-y-4" noValidate>
 
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" {...register('name')} className="bg-background focus-visible:ring-primary" />
-                {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
-              </div>
+              <InputField
+                label="Full Name"
+                htmlFor="name"
+                error={errors.name}
+                register={register('name')}
+                inputClassName="bg-background focus-visible:ring-primary"
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  placeholder="+91XXXXXXXXXX"
-                  {...register('phone')}
-                  className="bg-background focus-visible:ring-primary"
-                />
-                {errors.phone && <p className="text-red-500 text-xs">{errors.phone.message}</p>}
-              </div>
+              <InputField
+                label="Phone Number"
+                htmlFor="phone"
+                placeholder="+91XXXXXXXXXX"
+                error={errors.phone}
+                register={register('phone')}
+                inputClassName="bg-background focus-visible:ring-primary"
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
@@ -265,20 +257,15 @@ export default function Profile() {
               </div>
 
               <div className="pt-4 flex justify-end">
-                <Button
+                <LoadingButton
                   type="submit"
                   disabled={isBusy || !isDirty}
+                  isLoading={isSavingInfo}
+                  loadingText="Saving..."
                   className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  {isSavingInfo ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
+                  Save Changes
+                </LoadingButton>
               </div>
             </form>
           </CardContent>
