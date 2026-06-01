@@ -1,26 +1,24 @@
-import { useEffect} from 'react'
+import { useEffect } from 'react'
 import { RouterProvider } from 'react-router-dom'
-import { Toaster, } from './components/ui/sonner'
+import { Toaster } from './components/ui/sonner'
 import { router } from './routes'
-import { useAuthStore } from './store/authStore'
+import { useAuth } from './hooks/useAuth'
 import { useCartStore } from './store/cartStore'
 import { authApi } from './services/authApi'
 import './App.css'
 
 function App() {
-  const { setAuth, clearAuth, setInitialized, isInitialized } = useAuthStore();
+  const { setAuth, clearAuth, setInitialized, isInitialized } = useAuth();
 
   useEffect(() => {
     const performSilentRefresh = async () => {
       try {
         const { accessToken, ...user } = await authApi.refresh();
         setAuth(user, accessToken);
-      } catch (error) {
-        // If it fails, they just aren't logged in. Clear state.
+      } catch {
         clearAuth();
         useCartStore.getState().clearCart();
       } finally {
-        // Tell the app it's done checking so it can render the UI
         setInitialized();
       }
     };
@@ -34,7 +32,7 @@ function App() {
 
   return (
     <>
-      <RouterProvider router={router}/>
+      <RouterProvider router={router} />
       <Toaster position="top-right" richColors />
     </>
   )

@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
 import { useCartStore } from '@/store/cartStore';
 import { apiClient } from '@/services/apiClient';
 import { Search, Bell, ShoppingCart, LogOut, UserCircle, Settings } from 'lucide-react';
@@ -20,7 +20,7 @@ import {
 import { TooltipProvider } from '../ui/tooltip';
 
 export default function MainLayout() {
-  const { user, clearAuth } = useAuthStore();
+  const { user, clearAuth } = useAuth();
   const { totalItems, clearCart } = useCartStore();
   const navigate = useNavigate();
 
@@ -38,92 +38,81 @@ export default function MainLayout() {
 
   return (
     <TooltipProvider>
-        <SidebarProvider>
-        {/* 1. The Dynamic Shadcn Sidebar */}
+      <SidebarProvider>
         <AppSidebar />
-        
-        {/* 2. Main Content Wrapper */}
+
         <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-background">
-            
-            {/* TOP NAVBAR */}
-            <header className="h-16 bg-white border-b border-border flex items-center justify-between px-4 sm:px-6 shrink-0">
-            
+          <header className="h-16 bg-white border-b border-border flex items-center justify-between px-4 sm:px-6 shrink-0">
             <div className="flex items-center flex-1 gap-4">
-                {/* Shadcn trigger automatically opens/closes the sidebar */}
-                <SidebarTrigger className="text-foreground hover:text-primary" />
-                
-                <div className="relative w-full max-w-md hidden sm:block">
+              <SidebarTrigger className="text-foreground hover:text-primary" />
+              <div className="relative w-full max-w-md hidden sm:block">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                    type="search" 
-                    placeholder="Search for dishes, categories..." 
-                    className="w-full pl-9 bg-background/50 focus-visible:ring-primary"
+                <Input
+                  type="search"
+                  placeholder="Search for dishes, categories..."
+                  className="w-full pl-9 bg-background/50 focus-visible:ring-primary"
                 />
-                </div>
+              </div>
             </div>
 
-            {/* Right Actions & Profile */}
             <div className="flex items-center gap-3 sm:gap-5">
-                <Button variant="ghost" size="icon" className="relative text-foreground hover:text-primary">
+              <Button variant="ghost" size="icon" className="relative text-foreground hover:text-primary">
                 <Bell className="w-5 h-5" />
-                </Button>
+              </Button>
 
-                {user?.role !== 'Admin' && (
+              {user?.role !== 'Admin' && (
                 <Button variant="ghost" size="icon" className="relative text-foreground hover:text-primary" onClick={() => navigate('/cart')}>
-                    <ShoppingCart className="w-5 h-5" />
-                    {totalItems > 0 && (
+                  <ShoppingCart className="w-5 h-5" />
+                  {totalItems > 0 && (
                     <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                        {totalItems}
+                      {totalItems}
                     </span>
-                    )}
+                  )}
                 </Button>
-                )}
+              )}
 
-                <DropdownMenu>
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9 border border-border">
-                        {/* <AvatarImage src={user?.profileImageUrl || ""} alt="Profile" /> */}
-                        <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">
                         {userInitial}
-                        </AvatarFallback>
+                      </AvatarFallback>
                     </Avatar>
-                    </Button>
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
+                  <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user?.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                        {/* Add a tiny badge to show their role */}
-                        <p className="text-xs font-bold text-primary mt-1">{user?.role}</p>
+                      <p className="text-sm font-medium leading-none">{user?.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                      <p className="text-xs font-bold text-primary mt-1">{user?.role}</p>
                     </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
                     <UserCircle className="mr-2 h-4 w-4" />
                     <span>My Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer">
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
-                    </DropdownMenuItem>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
-                </DropdownMenu>
+              </DropdownMenu>
             </div>
-            </header>
+          </header>
 
-            {/* PAGE CONTENT */}
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             <Outlet />
-            </main>
+          </main>
         </div>
-        </SidebarProvider>
+      </SidebarProvider>
     </TooltipProvider>
   );
 }

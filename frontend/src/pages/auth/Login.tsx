@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '@/services/authApi';
-import { useAuthStore } from '@/store/authStore';
-import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { getApiErrorMessage } from '@/lib/utils';
 import { loginSchema, type LoginFormData } from '@/schemas/auth';
 import { AuthCard } from '@/components/common/AuthCard';
 import { InputField } from '@/components/common/FormField';
@@ -14,36 +14,33 @@ import { Label } from '@/components/ui/label';
 
 export default function Login() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const [isLoading, setIsLoading] = useState(false);
+  const { setAuth } = useAuth();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+  const { isSubmitting, handleSubmit } = useFormSubmit({
+    errorMessage: 'Failed to login. Please check your credentials.',
+  });
+
+  const { register, handleSubmit: handleSubmitForm, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    try {
+  const onSubmit = (data: LoginFormData) =>
+    handleSubmit(async () => {
       const { accessToken, ...user } = await authApi.login(data);
       setAuth(user, accessToken);
-      toast.success('Welcome back!');
-      navigate('/dashboard');
-    } catch (error: any) {
-      const errorData = error.response?.data;
-      const errorMessage = errorData?.errors?.[0]
-        || errorData?.message
-        || 'Failed to login. Please check your credentials.';
-
-      if (errorMessage.toLowerCase().includes('verify your email')) {
-        toast.error('You need to verify your email first.');
-        navigate('/verify-email', { state: { email: data.email } });
-      } else {
-        toast.error(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return user;
+    }, {
+      successMessage: 'Welcome back!',
+      onSuccess: () => {
+        navigate('/dashboard');
+      },
+      onError: (error) => {
+        const msg = getApiErrorMessage(error, '');
+        if (msg.toLowerCase().includes('verify your email')) {
+          navigate('/verify-email', { state: { email: data.email } });
+        }
+      },
+    });
 
   return (
     <AuthCard
@@ -56,7 +53,7 @@ export default function Login() {
         </span>
       }
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmitForm(onSubmit)} className="space-y-4" noValidate>
         <InputField
           label="Email"
           htmlFor="email"
@@ -84,7 +81,7 @@ export default function Login() {
         <LoadingButton
           type="submit"
           className="w-full"
-          isLoading={isLoading}
+          isLoading={isSubmitting}
           loadingText="Signing in..."
         >
           Sign In

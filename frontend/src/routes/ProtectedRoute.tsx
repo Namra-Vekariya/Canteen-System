@@ -1,10 +1,9 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, isInitialized } = useAuthStore();
+  const { isAuthenticated, isInitialized } = useAuth();
 
-  // Wait for the silent refresh to finish before deciding where to send them
   if (!isInitialized) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
@@ -15,11 +14,9 @@ export default function ProtectedRoute() {
     );
   }
 
-  // If not logged in, kick them to login and replace the history stack
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // If logged in, render the child components (like the Dashboard)
   return <Outlet />;
 }

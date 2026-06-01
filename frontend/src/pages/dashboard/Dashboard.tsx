@@ -1,4 +1,4 @@
-import  { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,24 +7,24 @@ import { Label } from '@/components/ui/label';
 import { ShoppingCart, Clock, Flame, Leaf, Drumstick } from 'lucide-react';
 import { format } from 'date-fns';
 import { menuApi, type CategoryResponse, type MenuItemResponse } from '@/services/menuApi';
-import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
+import { getApiErrorMessage } from '@/lib/utils';
 import fallbackImage from '@/assets/images/thali.jpg';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user } = useAuth();
     const [categories, setCategories] = useState<CategoryResponse[]>([]);
     const [menuItems, setMenuItems] = useState<MenuItemResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // UI State
     const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
     const [vegOnly, setVegOnly] = useState(false);
 
-    // Global Cart State
     const { items: cartItems, addItem, updateQuantity, totalItems } = useCartStore();
+
     const fetchDashboardData = async () => {
         setLoading(true);
         setError(null);
@@ -45,26 +45,21 @@ export default function Dashboard() {
             if (bothFailed) {
                 setError("Failed to load menu data. Please try again.");
             } else if (catsResult.status === 'rejected') {
-                console.error("Failed to load categories:", catsResult.reason);
                 setError("Categories failed to load. Showing all items.");
             } else if (itemsResult.status === 'rejected') {
-                console.error("Failed to load menu items:", itemsResult.reason);
                 setError("Menu items failed to load. Please try again.");
             }
-        } catch (error) {
-            console.error("Failed to load menu data", error);
-            setError("Failed to load menu data. Please try again.");
+        } catch (err) {
+            setError(getApiErrorMessage(err, "Failed to load menu data. Please try again."));
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchDashboardData();
     }, []);
 
-    // Instant Frontend Filtering
     const filteredItems = menuItems.filter(item => {
         if (activeCategoryId && item.categoryId !== activeCategoryId) return false;
         if (vegOnly && !item.isVeg) return false;
@@ -88,8 +83,6 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col min-w-0 w-full">
-            
-            {/* Saffron Header */}
             <header className="bg-orange-500 text-white px-4 sm:px-8 py-4 sm:py-6 shadow-md flex justify-between items-center rounded-t-lg">
                 <div className="min-w-0">
                     <h1 className="text-xl sm:text-3xl font-bold tracking-tight truncate">Good afternoon! {user?.name}</h1>
@@ -99,7 +92,7 @@ export default function Dashboard() {
                     <div className="text-right hidden md:block">
                         <p className="text-sm font-medium text-orange-100">{format(new Date(), 'EEEE, dd MMM yyyy')}</p>
                     </div>
-                    <Button onClick={()=>navigate('/cart')} variant="secondary" className="bg-white text-orange-600 hover:bg-orange-50 relative">
+                    <Button onClick={() => navigate('/cart')} variant="secondary" className="bg-white text-orange-600 hover:bg-orange-50 relative">
                         <ShoppingCart className="w-5 h-5 mr-2" />
                         Cart
                         {totalItems > 0 && (
@@ -112,8 +105,6 @@ export default function Dashboard() {
             </header>
 
             <main className="flex-1 w-full mx-auto p-4 sm:p-6 flex gap-8">
-                
-                {/* Left Sidebar - Navigation & Filters */}
                 <aside className="flex-shrink-0 space-y-8 hidden md:block">
                     <div>
                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Categories</h3>
@@ -122,9 +113,9 @@ export default function Dashboard() {
                                 <button
                                     onClick={() => setActiveCategoryId(null)}
                                     className={`w-full text-left px-4 py-2 rounded-md font-medium transition-colors ${
-                                        activeCategoryId === null 
-                                        ? 'bg-orange-100 text-orange-700' 
-                                        : 'text-gray-600 hover:bg-gray-100'
+                                        activeCategoryId === null
+                                            ? 'bg-orange-100 text-orange-700'
+                                            : 'text-gray-600 hover:bg-gray-100'
                                     }`}
                                 >
                                     All Items
@@ -135,9 +126,9 @@ export default function Dashboard() {
                                     <button
                                         onClick={() => setActiveCategoryId(cat.id)}
                                         className={`w-full text-left px-4 py-2 rounded-md font-medium transition-colors ${
-                                            activeCategoryId === cat.id 
-                                            ? 'bg-orange-100 text-orange-700' 
-                                            : 'text-gray-600 hover:bg-gray-100'
+                                            activeCategoryId === cat.id
+                                                ? 'bg-orange-100 text-orange-700'
+                                                : 'text-gray-600 hover:bg-gray-100'
                                         }`}
                                     >
                                         {cat.name}
@@ -150,10 +141,10 @@ export default function Dashboard() {
                     <div>
                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Filters</h3>
                         <div className="flex items-center space-x-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                            <Switch 
-                                id="veg-mode" 
-                                checked={vegOnly} 
-                                onCheckedChange={setVegOnly} 
+                            <Switch
+                                id="veg-mode"
+                                checked={vegOnly}
+                                onCheckedChange={setVegOnly}
                                 className="data-[state=checked]:bg-green-600"
                             />
                             <Label htmlFor="veg-mode" className="font-medium cursor-pointer flex items-center gap-2">
@@ -164,7 +155,6 @@ export default function Dashboard() {
                     </div>
                 </aside>
 
-                {/* Right Area - Food Grid */}
                 <section className="flex-1">
                     <div className="mb-6 flex justify-between items-end border-b pb-4">
                         <h2 className="text-2xl font-bold text-gray-800">
@@ -173,7 +163,6 @@ export default function Dashboard() {
                         <span className="text-sm text-gray-500 font-medium">{filteredItems.length} items</span>
                     </div>
 
-                    {/* Mobile Filter Bar - visible only on small screens */}
                     <div className="mb-6 md:hidden">
                         <div className="flex items-center gap-3 mb-3">
                             <Switch
@@ -221,7 +210,6 @@ export default function Dashboard() {
 
                             return (
                                 <Card key={item.id} className={`overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow ${!item.isAvailable && 'opacity-60 grayscale'}`}>
-                                    {/* Image Placeholder - Replace with generic color block if no image */}
                                     <div className="h-36 sm:h-40 bg-orange-50 relative flex items-center justify-center overflow-hidden">
                                         <img
                                             src={item.imageUrl || fallbackImage}
@@ -236,7 +224,6 @@ export default function Dashboard() {
                                                 }
                                             }}
                                         />
-                                        {/* Veg/Non-Veg Badge */}
                                         <div className="absolute top-3 left-3 bg-white p-1 rounded shadow-sm">
                                             {item.isVeg ? <Leaf className="w-4 h-4 text-green-600" /> : <Drumstick className="w-4 h-4 text-red-600" />}
                                         </div>
@@ -246,11 +233,11 @@ export default function Dashboard() {
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     <CardContent className="p-4">
                                         <h3 className="font-bold text-lg text-gray-900 truncate">{item.name}</h3>
                                         <p className="text-xs text-gray-500 mb-3">{item.categoryName}</p>
-                                        
+
                                         <div className="flex items-center gap-4 text-xs font-medium text-gray-600">
                                             {item.prepTimeMins != null && (
                                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {item.prepTimeMins} min</span>
@@ -263,7 +250,7 @@ export default function Dashboard() {
 
                                     <CardFooter className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                         <span className="text-lg font-bold text-gray-900">₹{item.price}</span>
-                                        
+
                                         {item.isAvailable ? (
                                             quantity > 0 ? (
                                                 <div className="flex items-center gap-3 bg-orange-50 rounded-md border border-orange-200">
@@ -272,9 +259,9 @@ export default function Dashboard() {
                                                     <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-orange-600 hover:bg-orange-100 rounded">+</button>
                                                 </div>
                                             ) : (
-                                                <Button 
+                                                <Button
                                                     onClick={() => addItem(item)}
-                                                    variant="outline" 
+                                                    variant="outline"
                                                     className="border-orange-500 text-orange-600 hover:bg-orange-50"
                                                     size="sm"
                                                 >

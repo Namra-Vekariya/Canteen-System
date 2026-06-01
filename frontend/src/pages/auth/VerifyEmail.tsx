@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { authApi } from '@/services/authApi';
-import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
+import { authApi } from '@/services/authApi';
+import { useAuth } from '@/hooks/useAuth';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { verifyEmailSchema, type VerifyEmailFormData } from '@/schemas/auth';
 import { AuthCard } from '@/components/common/AuthCard';
 import { OTPInput } from '@/components/common/OTPInput';
 import { LoadingButton } from '@/components/common/LoadingButton';
@@ -12,55 +15,50 @@ import { Label } from '@/components/ui/label';
 export default function VerifyEmail() {
   const navigate = useNavigate();
   const location = useLocation();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { setAuth } = useAuth();
 
   const emailFromState = (location.state as { email?: string })?.email || '';
 
-  const [email, setEmail] = useState(emailFromState);
-  const [otpCode, setOtpCode] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isResending, setIsResending] = useState(false);
+  const { register, handleSubmit, formState: { errors } } = useForm<VerifyEmailFormData>({
+    resolver: zodResolver(verifyEmailSchema),
+    defaultValues: {
+      email: emailFromState,
+      otpCode: '',
+    },
+  });
 
-  const handleVerify = async (e: React.SyntheticEvent) => {
-    e.preventDefault();
+  const { isSubmitting: isVerifying, handleSubmit: handleVerifySubmit } = useFormSubmit({
+    errorMessage: 'Verification failed. Please try again.',
+  });
 
-    if (!email || otpCode.length !== 6) {
-      toast.error('Please enter your email and 6-digit OTP.');
-      return;
-    }
+  const { isSubmitting: isResending, handleSubmit: handleResendSubmit } = useFormSubmit({
+    errorMessage: 'Failed to resend OTP. Please try again.',
+  });
 
-    setIsLoading(true);
-    try {
-      const { accessToken, ...user } = await authApi.verifyEmail({ email, otpCode });
+  const onVerify = (data: VerifyEmailFormData) =>
+    handleVerifySubmit(async () => {
+      const { accessToken, ...user } = await authApi.verifyEmail(data);
       setAuth(user, accessToken);
-      toast.success('Email verified. Welcome!');
-      navigate('/dashboard');
-    } catch (error: any) {
-      const errorData = error.response?.data;
-      const errorMessage = errorData?.errors?.[0]
-        || errorData?.message
-        || 'Verification failed. Please try again.';
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return user;
+    }, {
+      successMessage: 'Email verified. Welcome!',
+      onSuccess: () => navigate('/dashboard'),
+    });
 
-  const handleResendOtp = async () => {
-    if (!email) {
+  const emailValue = emailFromState || '';
+
+  const onResend = () => {
+    if (!emailValue) {
       toast.error('Please enter your email first.');
       return;
     }
 
-    setIsResending(true);
-    try {
-      const message = await authApi.resendVerificationOtp(email);
-      toast.success(message);
-    } catch {
-      toast.error('Failed to resend OTP. Please try again.');
-    } finally {
-      setIsResending(false);
-    }
+    handleResendSubmit(async () => {
+      const message = await authApi.resendVerificationOtp(emailValue);
+      return message;
+    }, {
+      successMessageFn: (result) => result,
+    });
   };
 
   return (
@@ -73,7 +71,7 @@ export default function VerifyEmail() {
           <p className="text-gray-500">
             Didn't receive the code?{' '}
             <button
-              onClick={handleResendOtp}
+              onClick={onResend}
               disabled={isResending}
               className="text-blue-600 hover:underline font-medium disabled:text-gray-400"
             >
@@ -88,7 +86,7 @@ export default function VerifyEmail() {
         </div>
       }
     >
-      <form onSubmit={handleVerify} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onVerify)} className="space-y-4" noValidate>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -96,22 +94,22 @@ export default function VerifyEmail() {
             type="email"
             placeholder="john@example.com"
             disabled={!!emailFromState}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            {...register('email')}
           />
+          {errors.email && <p className="text-red-500 text-xs">{errors.email.message}</p>}
         </div>
 
         <OTPInput
           label="Verification Code"
           htmlFor="otpCode"
-          value={otpCode}
-          onChange={setOtpCode}
+          error={errors.otpCode}
+          register={register('otpCode')}
         />
 
         <LoadingButton
           type="submit"
           className="w-full"
-          isLoading={isLoading}
+          isLoading={isVerifying}
           loadingText="Verifying..."
         >
           Verify Email

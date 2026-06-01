@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { authApi } from '@/services/authApi';
-import { toast } from 'sonner';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/schemas/auth';
 import { AuthCard } from '@/components/common/AuthCard';
 import { InputField } from '@/components/common/FormField';
@@ -16,31 +15,27 @@ export default function ResetPassword() {
 
   const emailFromState = (location.state as { email?: string })?.email || '';
 
-  const [isLoading, setIsLoading] = useState(false);
+  const { isSubmitting, handleSubmit } = useFormSubmit({
+    errorMessage: 'Failed to reset password. Please check your OTP and try again.',
+  });
 
-  const { register, handleSubmit, formState: { errors } } = useForm<ResetPasswordFormData>({
+  const { register, handleSubmit: handleSubmitForm, formState: { errors } } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
       email: emailFromState,
     }
   });
 
-  const onSubmit = async (data: ResetPasswordFormData) => {
-    setIsLoading(true);
-    try {
+  const onSubmit = (data: ResetPasswordFormData) =>
+    handleSubmit(async () => {
       const message = await authApi.resetPassword(data);
-      toast.success(message);
-      navigate('/login');
-    } catch (error: any) {
-      const errorData = error.response?.data;
-      const errorMessage = errorData?.errors?.[0]
-        || errorData?.message
-        || 'Failed to reset password. Please check your OTP and try again.';
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return message;
+    }, {
+      successMessageFn: (result) => result,
+      onSuccess: () => {
+        navigate('/login');
+      },
+    });
 
   return (
     <AuthCard
@@ -53,7 +48,7 @@ export default function ResetPassword() {
         </Link>
       }
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmitForm(onSubmit)} className="space-y-4" noValidate>
         <InputField
           label="Email"
           htmlFor="email"
@@ -90,7 +85,7 @@ export default function ResetPassword() {
         <LoadingButton
           type="submit"
           className="w-full mt-2"
-          isLoading={isLoading}
+          isLoading={isSubmitting}
           loadingText="Resetting..."
         >
           Reset Password

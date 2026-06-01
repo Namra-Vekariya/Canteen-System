@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom"
 import { Coffee, LayoutDashboard, ListOrdered, Users } from "lucide-react"
-import { useAuthStore } from "@/store/authStore"
+import { useAuth } from "@/hooks/useAuth"
 
 import {
   Sidebar,
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar"
 
 export function AppSidebar() {
-  const { user } = useAuthStore();
+  const { user } = useAuth();
   const location = useLocation();
 
   // 1. Define routes based on the Role from your JWT

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { isAxiosError } from 'axios';
-import { useAuthStore } from '@/store/authStore';
 import { userApi } from '@/services/userApi';
 import { updateProfileSchema, type UpdateProfileFormData } from '@/schemas/user';
 import { toast } from 'sonner';
 import { Camera, Loader2 } from 'lucide-react';
+import { getApiErrorMessage } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,19 +22,8 @@ function sanitiseImageUrl(url: string | null | undefined): string {
   return url.startsWith(ALLOWED_IMAGE_ORIGIN) ? url : '';
 }
 
-function getApiErrorMessage(error: unknown, fallback: string): string {
-  if (isAxiosError(error)) {
-    return (
-      error.response?.data?.errors?.[0] ??
-      error.response?.data?.message ??
-      fallback
-    );
-  }
-  return fallback;
-}
-
 export default function Profile() {
-  const { user, setAuth } = useAuthStore();
+  const { user, setAuth, accessToken } = useAuth();
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingInfo, setIsSavingInfo] = useState(false);
@@ -59,8 +48,7 @@ export default function Profile() {
 
         if (!isMounted) return;
 
-        const currentToken = useAuthStore.getState().accessToken;
-        if (currentToken) setAuth(trueProfile, currentToken);
+        if (accessToken) setAuth(trueProfile, accessToken);
 
         reset({
           name: trueProfile.name,
@@ -76,7 +64,7 @@ export default function Profile() {
     fetchTrueProfile();
 
     return () => { isMounted = false; };
-  }, [reset, setAuth]);
+  }, [reset, setAuth, accessToken]);
 
   useEffect(() => {
     return () => {
@@ -93,8 +81,7 @@ export default function Profile() {
     setIsSavingInfo(true);
     try {
       const { data: updatedUser } = await userApi.updateProfile(data);
-      const currentToken = useAuthStore.getState().accessToken;
-      if (currentToken) setAuth(updatedUser, currentToken);
+      if (accessToken) setAuth(updatedUser, accessToken);
 
       reset({
         name: updatedUser.name,
@@ -131,8 +118,7 @@ export default function Profile() {
 
     try {
       const { data: updatedProfile } = await userApi.uploadProfileImage(file);
-      const currentToken = useAuthStore.getState().accessToken;
-      if (currentToken) setAuth(updatedProfile, currentToken);
+      if (accessToken) setAuth(updatedProfile, accessToken);
 
       setPreviewUrl(null);
       toast.success('Photo updated');
