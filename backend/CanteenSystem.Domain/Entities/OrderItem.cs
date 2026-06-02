@@ -11,7 +11,7 @@ public class OrderItem : BaseEntity
     public required decimal UnitPrice { get; set; }
     public required int Quantity { get; set; }
     public required decimal LineTotal { get; set; }      // UnitPrice × Quantity
-    public bool IsVeg { get; set; } = true;
+    public required bool IsVeg { get; set; }
 
     public virtual Order? Order { get; set; }
     public virtual MenuItem? MenuItem { get; set; }

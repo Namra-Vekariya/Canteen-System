@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanteenSystem.Application.Common;
 using CanteenSystem.Application.Common.Exceptions;   // ← ADD THIS
 
@@ -42,7 +43,8 @@ public class GlobalExceptionMiddleware
 
         var response = ApiResponse<object>.FailureResponse(message,errors);
         var json = JsonSerializer.Serialize(response,
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new JsonStringEnumConverter()  } });
 
         return context.Response.WriteAsync(json);
     }

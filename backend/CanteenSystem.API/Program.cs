@@ -1,6 +1,8 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using CanteenSystem.API.Middleware;
 using CanteenSystem.Application.Interfaces;
+using CanteenSystem.Application.Interfaces.IOrderService;
 using CanteenSystem.Application.Services;
 using CanteenSystem.Application.Services.Menu;
 using CanteenSystem.Domain.Interfaces;
@@ -10,10 +12,7 @@ using CanteenSystem.Infrastructure.Repositories;
 using CanteenSystem.Infrastructure.Services;
 using CanteenSystem.Infrastructure.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
@@ -64,8 +63,11 @@ builder.Services.AddScoped<IMediaService, CloudinaryMediaService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IMenuRepository, MenuRepository>();
-
-builder.Services.AddControllers();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddControllers().AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 // Add the .NET 10 OpenAPI generation service
 builder.Services.AddOpenApi();

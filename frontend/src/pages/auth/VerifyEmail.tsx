@@ -17,7 +17,8 @@ export default function VerifyEmail() {
   const location = useLocation();
   const { setAuth } = useAuth();
 
-  const emailFromState = (location.state as { email?: string })?.email || '';
+  const state = location.state as { email?: string } | null;
+  const emailFromState = state?.email ?? '';
 
   const { register, handleSubmit, formState: { errors } } = useForm<VerifyEmailFormData>({
     resolver: zodResolver(verifyEmailSchema),
@@ -35,7 +36,7 @@ export default function VerifyEmail() {
     errorMessage: 'Failed to resend OTP. Please try again.',
   });
 
-  const onVerify = (data: VerifyEmailFormData) =>
+  const onVerify = async (data: VerifyEmailFormData) =>
     handleVerifySubmit(async () => {
       const { accessToken, ...user } = await authApi.verifyEmail(data);
       setAuth(user, accessToken);
@@ -47,7 +48,7 @@ export default function VerifyEmail() {
 
   const emailValue = emailFromState || '';
 
-  const onResend = () => {
+  const onResend = async () => {
     if (!emailValue) {
       toast.error('Please enter your email first.');
       return;
