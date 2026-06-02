@@ -1,16 +1,6 @@
-import type { ApiResponse } from '@/types/api';
+import type { ApiResponse } from '@/types/common';
+import type { UserProfileResponse } from '@/types/user';
 import { apiClient } from './apiClient';
-
-// Replicating your C# UserProfileResponse DTO
-export interface UserProfileResponse {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  role: string;
-  profileImageUrl: string | null;
-  createdAt: string | null;
-}
 
 export const userApi = {
   // GET: api/v1/Users/profile

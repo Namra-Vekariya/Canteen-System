@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { InputField } from '@/components/common/FormField';
+import { InputField } from '@/components/common';
 import { LoadingButton } from '@/components/common/LoadingButton';
 
 const ALLOWED_IMAGE_ORIGIN = 'https://res.cloudinary.com/drkdujqo5/image/upload/';

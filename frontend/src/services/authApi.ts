@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { AuthResponse, RegisterResponse } from '@/types/api';
+import type { AuthResponse, RegisterResponse } from '@/types/auth';
 import type { ForgotPasswordFormData, LoginFormData, RegisterFormData, ResetPasswordFormData, VerifyEmailFormData } from '@/schemas/auth';
 
 export const authApi = {

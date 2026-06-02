@@ -5,7 +5,7 @@ import { authApi } from '@/services/authApi';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/schemas/auth';
 import { AuthCard } from '@/components/common/AuthCard';
-import { InputField } from '@/components/common/FormField';
+import { InputField } from '@/components/common';
 import { LoadingButton } from '@/components/common/LoadingButton';
 
 export default function ForgotPassword() {

@@ -1,4 +1,4 @@
-import type { MenuItemResponse } from '@/services/menuApi';
+import type { MenuItemResponse } from '@/types/menu';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 interface CartItem {

@@ -5,7 +5,7 @@ import { authApi } from '@/services/authApi';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/schemas/auth';
 import { AuthCard } from '@/components/common/AuthCard';
-import { InputField } from '@/components/common/FormField';
+import { InputField } from '@/components/common';
 import { OTPInput } from '@/components/common/OTPInput';
 import { LoadingButton } from '@/components/common/LoadingButton';
 

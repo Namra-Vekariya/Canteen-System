@@ -7,7 +7,7 @@ import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { getApiErrorMessage } from '@/lib/utils';
 import { loginSchema, type LoginFormData } from '@/schemas/auth';
 import { AuthCard } from '@/components/common/AuthCard';
-import { InputField } from '@/components/common/FormField';
+import { InputField } from '@/components/common';
 import { LoadingButton } from '@/components/common/LoadingButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

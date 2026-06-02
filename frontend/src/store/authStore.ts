@@ -1,4 +1,4 @@
-import type { AuthResponse } from "@/types/api";
+import type { AuthResponse } from "@/types/auth";
 import { create } from "zustand";
 
 interface AuthState {
