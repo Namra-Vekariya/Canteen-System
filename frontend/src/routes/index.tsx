@@ -12,6 +12,7 @@ const VerifyEmail = lazy(() => import('@/pages/auth/VerifyEmail'));
 const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard'));
 const Profile = lazy(() => import('@/pages/profile/Profile'));
 const Cart = lazy(() => import('@/pages/Cart'));
+const OrderConfirmation = lazy(() => import('@/pages/orders/OrderConfirmation'));
 
 function PageLoader() {
   return (
@@ -72,6 +73,10 @@ export const router = createBrowserRouter([
           {
             path: '/cart',
             element: <SuspenseWrapper><Cart /></SuspenseWrapper>,
+          },
+          {
+            path: '/orders/:orderId/confirmation',
+            element: <SuspenseWrapper><OrderConfirmation /></SuspenseWrapper>,
           }
         ],
       },

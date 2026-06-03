@@ -2,14 +2,40 @@ import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/common';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { orderApi } from '@/services/orderApi';
+import type { CreateOrderRequest } from '@/types/order';
 import { Trash2, ArrowLeft, ShoppingBag } from 'lucide-react';
 import fallbackImage from '@/assets/images/thali.jpg';
 
 export default function Cart() {
     const navigate = useNavigate();
-    const { items, totalPrice, totalItems, updateQuantity, removeItem } = useCartStore();
+    const { items, totalPrice, totalItems, updateQuantity, removeItem, clearCart } = useCartStore();
+    const { isSubmitting, handleSubmit } = useFormSubmit({
+        successMessage: 'Order placed successfully!',
+        errorMessage: 'Failed to place order. Please try again.',
+    });
 
     const cartItemsArray = Object.values(items);
+
+    const onCheckout = () => {
+        handleSubmit(async () => {
+            const request: CreateOrderRequest = {
+                items: cartItemsArray.map(({ menuItem, quantity }) => ({
+                    menuItemId: menuItem.id,
+                    quantity,
+                })),
+            };
+            console.log(request);
+            const order = await orderApi.placeOrder(request);
+            console.log(order);
+            
+            clearCart();
+            navigate(`/orders/${order.orderId}/confirmation`);
+            return order;
+        });
+    };
 
     if (cartItemsArray.length === 0) {
         return (
@@ -81,21 +107,24 @@ export default function Cart() {
                                             <div className="flex items-center gap-2 bg-gray-50 rounded-md p-1 border border-gray-200">
                                                 <button
                                                     onClick={() => updateQuantity(menuItem.id, -1)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded font-bold text-sm"
+                                                    disabled={isSubmitting}
+                                                    className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     -
                                                 </button>
                                                 <span className="font-semibold text-sm w-6 text-center">{quantity}</span>
                                                 <button
                                                     onClick={() => updateQuantity(menuItem.id, 1)}
-                                                    className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-orange-600 hover:bg-orange-100 rounded font-bold text-sm"
+                                                    disabled={isSubmitting}
+                                                    className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-orange-600 hover:bg-orange-100 rounded font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     +
                                                 </button>
                                             </div>
                                             <button
                                                 onClick={() => removeItem(menuItem.id)}
-                                                className="text-gray-400 hover:text-red-500 p-1.5 sm:p-2 rounded-full transition-colors"
+                                                disabled={isSubmitting}
+                                                className="text-gray-400 hover:text-red-500 p-1.5 sm:p-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                                             </button>
@@ -127,12 +156,15 @@ export default function Cart() {
                                 <span className="text-xl font-bold text-orange-600">₹{totalPrice}</span>
                             </div>
 
-                            <Button
-                                onClick={() => alert('Checkout flow coming next!')}
+                            <LoadingButton
+                                onClick={onCheckout}
+                                isLoading={isSubmitting}
+                                loadingText="Placing Order..."
+                                disabled={cartItemsArray.length === 0}
                                 className="w-full bg-orange-500 hover:bg-orange-600 text-white py-5 sm:py-6 text-base sm:text-lg font-bold rounded-xl"
                             >
                                 Proceed to Checkout
-                            </Button>
+                            </LoadingButton>
                         </CardContent>
                     </Card>
                 </div>

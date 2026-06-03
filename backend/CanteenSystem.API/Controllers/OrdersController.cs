@@ -36,5 +36,17 @@ namespace CanteenSystem.API.Controllers
                 response,
                 "Order placed successfully. Please present your token at the counter to pay."));
         }
+        [HttpGet("{orderId:guid}")]
+        public async Task<ActionResult<ApiResponse<OrderResponse>>> GetOrder(Guid orderId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                            ?? User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out Guid userId))
+            {
+                return Unauthorized(ApiResponse<OrderResponse>.FailureResponse("Invalid or missing user token."));
+            }
+            var response = await _orderService.GetOrderByIdAsync(orderId, userId);
+            return Ok(ApiResponse<OrderResponse>.SuccessResponse(response));
+        }
     }
 }

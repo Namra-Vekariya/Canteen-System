@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useCartStore } from '@/store/cartStore';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,58 +8,37 @@ import { ShoppingCart, Clock, Flame, Leaf, Drumstick } from 'lucide-react';
 import { format } from 'date-fns';
 import { menuApi } from '@/services/menuApi';
 import type { CategoryResponse, MenuItemResponse } from '@/types/menu';
+import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
-import { getApiErrorMessage } from '@/lib/utils';
 import fallbackImage from '@/assets/images/thali.jpg';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [categories, setCategories] = useState<CategoryResponse[]>([]);
-    const [menuItems, setMenuItems] = useState<MenuItemResponse[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+
+    const categoriesApi = useApi<CategoryResponse[]>({
+        queryFn: () => menuApi.getCategories(),
+    });
+    const menuItemsApi = useApi<MenuItemResponse[]>({
+        queryFn: () => menuApi.getMenuItems(),
+    });
+
+    const isLoading = categoriesApi.isLoading || menuItemsApi.isLoading;
+    const categories = categoriesApi.data ?? [];
+    const menuItems = menuItemsApi.data ?? [];
+    const bothFailed = !!categoriesApi.error && !!menuItemsApi.error;
+    const catsFailedOnly = !!categoriesApi.error && !menuItemsApi.error;
+    const itemsFailedOnly = !categoriesApi.error && !!menuItemsApi.error;
+    const errorMessage = bothFailed
+        ? (categoriesApi.error ?? menuItemsApi.error)
+        : null;
+    const refetch = () => { categoriesApi.refetch(); menuItemsApi.refetch(); };
 
     const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
     const [vegOnly, setVegOnly] = useState(false);
 
     const { items: cartItems, addItem, updateQuantity, totalItems } = useCartStore();
-
-    const fetchDashboardData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const [catsResult, itemsResult] = await Promise.allSettled([
-                menuApi.getCategories(),
-                menuApi.getMenuItems()
-            ]);
-
-            if (catsResult.status === 'fulfilled') {
-                setCategories(catsResult.value);
-            }
-            if (itemsResult.status === 'fulfilled') {
-                setMenuItems(itemsResult.value);
-            }
-
-            const bothFailed = catsResult.status === 'rejected' && itemsResult.status === 'rejected';
-            if (bothFailed) {
-                setError("Failed to load menu data. Please try again.");
-            } else if (catsResult.status === 'rejected') {
-                setError("Categories failed to load. Showing all items.");
-            } else if (itemsResult.status === 'rejected') {
-                setError("Menu items failed to load. Please try again.");
-            }
-        } catch (err) {
-            setError(getApiErrorMessage(err, "Failed to load menu data. Please try again."));
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
 
     const filteredItems = menuItems.filter(item => {
         if (activeCategoryId && item.categoryId !== activeCategoryId) return false;
@@ -67,15 +46,15 @@ export default function Dashboard() {
         return true;
     });
 
-    if (loading) {
+    if (isLoading) {
         return <div className="flex h-screen items-center justify-center text-orange-500">Loading menu...</div>;
     }
 
-    if (error) {
+    if (bothFailed) {
         return (
             <div className="flex h-screen items-center justify-center flex-col gap-4">
-                <p className="text-red-500 text-lg">{error}</p>
-                <Button onClick={fetchDashboardData} className="bg-orange-500 hover:bg-orange-600 text-white">
+                <p className="text-red-500 text-lg">{errorMessage}</p>
+                <Button onClick={refetch} className="bg-orange-500 hover:bg-orange-600 text-white">
                     Retry
                 </Button>
             </div>
@@ -104,6 +83,17 @@ export default function Dashboard() {
                     </Button>
                 </div>
             </header>
+
+            {(catsFailedOnly || itemsFailedOnly) && (
+                <div className="bg-yellow-50 border-b border-yellow-200 text-yellow-800 text-sm px-4 sm:px-8 py-2 flex items-center justify-between">
+                    <span>
+                        {catsFailedOnly
+                            ? "Categories failed to load. Showing all items."
+                            : "Menu items failed to load."}
+                    </span>
+                    <button onClick={refetch} className="underline font-medium">Retry</button>
+                </div>
+            )}
 
             <main className="flex-1 w-full mx-auto p-4 sm:p-6 flex gap-8">
                 <aside className="flex-shrink-0 space-y-8 hidden md:block">

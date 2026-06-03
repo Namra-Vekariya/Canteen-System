@@ -11,17 +11,20 @@ namespace CanteenSystem.Application.Services
     public class OrderService : IOrderService
     {
         private readonly IGenericRepository<Order> _orderRepository;
+        private readonly IOrderRepository _orderDetailRepository;
         private readonly IGenericRepository<MenuItem> _menuItemRepository;
         private readonly IGenericRepository<Payment> _paymentRepository;
         private readonly IGenericRepository<OrderStatusLog> _statusLogRepository;
 
         public OrderService(
             IGenericRepository<Order> orderRepository,
+            IOrderRepository orderDetailRepository,
             IGenericRepository<MenuItem> menuItemRepository,
             IGenericRepository<Payment> paymentRepository,
             IGenericRepository<OrderStatusLog> statusLogRepository)
         {
             _orderRepository = orderRepository;
+            _orderDetailRepository = orderDetailRepository;
             _menuItemRepository = menuItemRepository;
             _paymentRepository = paymentRepository;
             _statusLogRepository = statusLogRepository;
@@ -85,6 +88,7 @@ namespace CanteenSystem.Application.Services
                 responseItems.Add(new OrderItemDto
                 {
                     ItemName = dbItem.Name,
+                    ImageUrl = dbItem.ImageUrl,
                     Quantity = requestItem.Quantity,
                     UnitPrice = dbItem.Price
                 });
@@ -142,6 +146,42 @@ namespace CanteenSystem.Application.Services
                     return token;
                 }
             }
+        }
+        public async Task<OrderResponse> GetOrderByIdAsync(Guid orderId, Guid userId)
+        {
+            var order = await _orderDetailRepository.GetOrderWithDetailsAsync(orderId);
+
+            if (order == null)
+            {
+                throw new AppException("Order not found.", HttpStatusCode.NotFound);
+            }
+            if (order.UserId != userId)
+            {
+                throw new AppException("You are not authorized to view this order.", HttpStatusCode.Forbidden);
+            }
+            return new OrderResponse
+            {
+                OrderId = order.Id,
+                OrderNumber = order.Token,
+                Status = order.Status.ToString(),
+                PaymentStatus = order.PaymentStatus.ToString(),
+                PaymentMethod = order.Payment?.Method.ToString() ?? "Cash",
+                TotalAmount = order.TotalAmount,
+                CreatedAt = order.CreatedAt,
+                CollectedAt = order.CollectedAt,
+                CancelledAt = order.CancelledAt,
+                SpecialInstructions = order.SpecialInstructions,
+                Items = order.OrderItems.Select(oi => new OrderItemResponse
+                {
+                    ItemId = oi.Id,
+                    ItemName = oi.ItemName,
+                    ImageUrl = oi.ItemImageUrl,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    LineTotal = oi.LineTotal,
+                    IsVeg = oi.IsVeg
+                }).ToList()
+            };
         }
     }
 }

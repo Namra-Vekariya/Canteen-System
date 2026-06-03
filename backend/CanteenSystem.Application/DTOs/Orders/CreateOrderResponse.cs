@@ -15,10 +15,11 @@ namespace CanteenSystem.Application.DTOs.Orders
         public List<OrderItemDto> Items { get; set; } = new List<OrderItemDto>();
     }
 
-    public class OrderItemDto
-    {
-        public required string ItemName { get; set; }
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-    }
+public class OrderItemDto
+{
+    public required string ItemName { get; set; }
+    public string? ImageUrl { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+}
 }
