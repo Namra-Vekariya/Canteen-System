@@ -2,8 +2,10 @@ using System.Text;
 using System.Text.Json.Serialization;
 using CanteenSystem.API.Middleware;
 using CanteenSystem.Application.Interfaces;
+using CanteenSystem.Application.Interfaces.Admin;
 using CanteenSystem.Application.Interfaces.IOrderService;
 using CanteenSystem.Application.Services;
+using CanteenSystem.Application.Services.Admin;
 using CanteenSystem.Application.Services.Menu;
 using CanteenSystem.Domain.Interfaces;
 using CanteenSystem.Infrastructure.Authentication;
@@ -65,6 +67,7 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IAdminMenuService, AdminMenuService>();
 builder.Services.AddControllers().AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
